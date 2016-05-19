@@ -1,3 +1,5 @@
+all: rpeanutc ras
+
 rpeanutc: src/memory.c include/memory.h src/emulate.c include/emulate.h include/interrupt.h src/rpeanutc.c
 	gcc -o rpeanutc -std=gnu11 -Wall -I include src/rpeanutc.c src/memory.c src/emulate.c
 
@@ -11,3 +13,10 @@ src/parser.tab.c include/parser.tab.h: src/parser.y
 
 src/tokenizer.yy.c: src/tokenizer.l include/parser.h include/parser.tab.h
 	flex -o src/tokenizer.yy.c src/tokenizer.l
+
+clean:
+	rm -f src/tokenizer.yy.c
+	rm -f src/parser.tab.c
+	rm -f include/parser.tab.h
+	rm -f ras
+	rm -f rpeanutc
