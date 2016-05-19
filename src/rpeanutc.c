@@ -3,11 +3,15 @@
 
 #include "emulate.h"
 #include "memory.h"
+#include "interrupt.h"
 
-void dump(int32_t*);
+void dump(int32_t[]);
 
 int main( int argc, char **argv )
 {
+    //disable buffering for stdout (its not needed)
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     ++argv, --argc;  /* skip over program name */
     FILE * input;
     if (argc > 0)

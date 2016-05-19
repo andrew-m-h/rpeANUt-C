@@ -15,7 +15,7 @@ jump time
 	set TI
         load #0 R6
 	move R6 R7
-wait:	jumpz R6 wait
+wait:	jump wait
 	halt
 
 writechar:
@@ -25,20 +25,22 @@ writechar:
 	return
 
 keyboard:
-	store ZERO 0xFFF2
 	load #'k' R0
 	store R0 0xFFF0
+	load 0xFFF0 R0
+	reset IM
 	return
 
 error:
 	load #'E' R0
 	store R0 0xFFF0
+	reset IM
 	return
 
 time:   load #'T' R0
 	store R0 0xFFF0
-        load #1 R6
 	reset TI
+	reset IM
 	return
 
 num:

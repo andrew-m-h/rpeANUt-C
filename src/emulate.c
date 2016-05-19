@@ -271,8 +271,9 @@ struct pollfd stdin_poll = {.fd = STDIN_FILENO
                             , .events = POLLIN | POLLRDBAND | POLLRDNORM | POLLPRI };
 
 void setIOFlags(void){
+
     if (poll(&stdin_poll, 1, 0)){
-        if (!SR){
+        if (!(SR && IM)){
             KeyboardInterrupt = 1;
         }
         Memory[0xFFF1] = 0x1;
