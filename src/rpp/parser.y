@@ -3,7 +3,12 @@
     #include <stdlib.h>
     #include <string.h>
     #include <search.h>
+    #include <unistd.h>
+    #include <sys/wait.h>
     #include "parser.h"
+
+    char outputFile[FILE_LENGTH] = {0};
+    int fileLen = 0;
 
     void insertDefinition(char * lable, char * expansion){
         ENTRY e;
@@ -23,8 +28,38 @@
         }
     }
 
-    char outputFile[FILE_LENGTH] = {0};
-    int fileLen = 0;
+    void includeFile(char * filename){
+        int fd[2];
+        int pid;
+        int len;
+        int status;
+        char * args[3];
+        pipe(fd);
+        switch (pid = fork()){
+        case 0: //child
+            args[0] = "./rpp";
+            args[1] = filename;
+            args[2] = NULL;
+
+            close(fd[0]);
+            dup2(fd[1], 1);
+            close(fd[1]);
+
+            execvp(args[0], args);
+
+            return;
+        case -1: //error
+            perror("fork");
+            exit(1);
+
+        default: //parent
+            close(fd[1]);
+            len = read(fd[0], outputFile + fileLen, FILE_LENGTH - fileLen);
+            waitpid(pid, &status, 0);
+            close(fd[0]);
+        }
+        fileLen += len;
+    }
 %}
 
 %union {
@@ -34,12 +69,12 @@
 
 %token <sval> MACRO_ARG
 %token <sval> LABLE
+%token <sval> FILENAME
 %token <sval> EXPANSION
 %token <cval> CHAR
 
 %token LINE_MACRO
-%token MACRO_BEGIN
-%token MACRO_END
+%token INCLUDE_MACRO
 %token ENDL
 
 %%
@@ -51,8 +86,13 @@ file:
 
 expression:
     lineMacro
+    | includeMacro
     | LABLE      {char * str = lookupLable($1); strcpy(outputFile + fileLen, str); fileLen += strlen(str);}
     | CHAR       {outputFile[fileLen++] = $1;}
+    ;
+
+includeMacro:
+    INCLUDE_MACRO FILENAME ENDL            {includeFile($2);}
     ;
 
 lineMacro:
@@ -63,6 +103,5 @@ lineMacro:
 
 void yyerror(const char *s) {
     printf ("Parse Error! Message: %s\n", s);
-    // might as well halt now:
     exit(-1);
 }
