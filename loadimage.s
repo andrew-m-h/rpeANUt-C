@@ -1,3 +1,28 @@
+;;;;;; Comp2300 Assignment 2
+;; by Andrew Hall (u5825803)
+
+;; This code was completly written by myself, based on my own ideas and research.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;               ######               #####            ##### ;
+;              ########              #####            ##### ;
+;             ##########             #####            ##### ;
+;            #####  #####            #####            ##### ;
+;           #####    #####           #####            ##### ;
+;          #####      #####          #####            ##### ;
+;         #####        #####         #####            ##### ;
+;        ####################        ###################### ;
+;       ######################       ###################### ;
+;      ########################      ###################### ;
+;     #####                #####     #####            ##### ;
+;    #####                  #####    #####            ##### ;
+;   #####                    #####   #####            ##### ;
+;  #####                      #####  #####            ##### ;
+; #####                        ##### #####            ##### ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Read RPI & ignore
 0x100: load 0xFFF0 R0
 	jumpz R0 0x100
 RL0:   load 0xFFF0 R0
@@ -38,6 +63,9 @@ RL5:	load 0xFFF0 R2
 	add R0 R2 SP			; let SP = height be used elsewhere
 	sub SP #0x14D0 SP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Detect which mode to engage, jump to entry point
+
 mode: 	load 0xFFF0 R1
 	jumpz R1 mode
 	sub R1 #'B' R1
@@ -46,103 +74,209 @@ mode: 	load 0xFFF0 R1
 	sub R1 #6 R1
 	jumpz R1 huffman
 	load #0 R1
-hex: store SP height
-	load #0 SP			; count = 0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; hex mode
+
+;    y = 0;
+;    int32_t count = 0;
+;    int32_t bits;
+;    while (y != height){
+;        x = 0;
+;        int32_t* wordaddr = (output - 1) + 6 * y;
+;        int32_t mask = *wordaddr;
+;        y++;
+;        while (x != width){
+;            int32_t bitaddr = x % 32;
+;            count = count % 4
+;            if (bitaddr == 0){
+;                *wordaddr = mask;
+;                wordaddr++;
+;                mask = 0;
+;            }
+;            if (count == 0){
+;                READCHAR;
+;                bits = fromHex(c);
+;            }
+;            mask |= ((bits >> (3 - count)) & 1) << bitaddr;
+;            count++;
+;            x++;
+;        }
+;        *wordaddr = mask;
+;    }
+;    dump();
+;    HALT;
+#define X R0
+#define Y R1
+#define WORDADDR R2
+#define MASK R3
+#define BITADDR R4
+#define C R5
+#define WIDTH R6
+#define HEIGHT SP
+#define COUNT SP
+
+hex: store HEIGHT height
+	load #0 COUNT			; count = 0
 	jump hexWhileY
 
-hexWhileXCont: store R3 R2		; *wordaddr = mask
+hexWhileXCont: store MASK WORDADDR		; *wordaddr = mask
 	;; }  placing hexWhileXCont up here removes one jump per row
 
 hexWhileY: load height R7
-	sub R1 R7 R7		; while (y != height)
+	sub Y R7 R7		; while (y != height)
 	jumpz R7 finish
-	load #0 R0			; x = 0
+	load #0 X			; x = 0
 	;load #0x7C3F R2		; wordaddr = output - 1
 	;mult R1 #6 R7
 	;add R2 R7 R2			; wordaddr += 6 * y
-	load R1 #outSub1Add6y R2
-	load R2 R3		; mask = *wordaddr
-	add R1 #1 R1			; y++
+	load Y #outSub1Add6y WORDADDR
+	load WORDADDR MASK		; mask = *wordaddr
+	add Y #1 Y			; y++
 
-hexWhileX: sub R0 R6 R7		; while (x != width){
+hexWhileX: sub X WIDTH R7		; while (x != width){
 	jumpz R7 hexWhileXCont
-	mod R0 #32 R4		; bitaddr = x % 32
-	mod SP #4 SP		; count = count % 4
+	mod X #32 BITADDR		; bitaddr = x % 32
+	mod COUNT #4 COUNT		; count = count % 4
 
-hexIfBitaddr: jumpnz R4 hexIfCount	; if (bitaddr == 0){
+hexIfBitaddr: jumpnz BITADDR hexIfCount	; if (bitaddr == 0){
 	;;if body
-	store R3 R2				; *wordaddr = mask
-	add R2 #1 R2			; wordaddr++
-	load #0 R3					; mask = 0
+	store MASK WORDADDR				; *wordaddr = mask
+	add WORDADDR #1 WORDADDR			; wordaddr++
+	load #0 MASK					; mask = 0
 						; }
 
-hexIfCount: jumpnz SP hexIfCont		; if (count == 0){
-hexRL:	load 0xFFF0 R5
-	jumpz R5 hexRL					; c = read character
-	load R5 #fromHex R5				; c = fromHex(c)
+hexIfCount: jumpnz COUNT hexIfCont		; if (count == 0){
+hexRL:	load 0xFFF0 C
+	jumpz C hexRL					; c = read character
+	load C #fromHex C				; c = fromHex(c)
 
-hexIfCont: sub SP #3 R7		; }
-	rotate R7 R5 R7
+hexIfCont: sub COUNT #3 R7		; }
+	rotate R7 C R7
 	and R7 #1 R7
-	rotate R4 R7 R7
-	or R3 R7 R3 	; mask |= ((bits >> (3 - count)) & 1) << bitaddr;
-	add SP #1 SP			; count++
-	add R0 #1 R0				; x++
+	rotate BITADDR R7 R7
+	or MASK R7 MASK 	; mask |= ((bits >> (3 - count)) & 1) << bitaddr;
+	add COUNT #1 COUNT			; count++
+	add X #1 X				; x++
 	jump hexWhileX
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; binary mode
 
-binWhileXCont: store R3 R2		; *wordaddr = mask
+;    y = 0;
+;    while (y != height){
+;        x = 0;
+;        int32_t* wordaddr = (output - 1) + 6 * y;
+;        int32_t mask;
+;        y++;
+;        while (x != width){
+;            int32_t bitaddr = x % 32;
+;            if (bitaddr == 0){
+;                *wordaddr = mask;
+;                wordaddr++;
+;                mask = 0;
+;            }
+;            x++;
+;
+;            READCHAR; //c = read
+;            int32_t bit = TOINT(c);
+;            mask |= bit << bitaddr;
+;        }
+;        *wordaddr = mask;
+;    }
+;    dump();
+;    HALT;
+
+
+binWhileXCont: store MASK WORDADDR		; *wordaddr = mask
 	;; }  placing binWhileXCont up here removes one jump per row
 
 binary:
-binWhileY: sub R1 SP R7			; while (y != height)
+binWhileY: sub Y HEIGHT R7			; while (y != height)
 	jumpz R7 finish
-	load #0 R0 				; x = 0
-	load R1 #outSub1Add6y R2
-	load R2 R3			; mask = *wordaddr
-	add R1 #1 R1				; y++
+	load #0 X 				; x = 0
+	load Y #outSub1Add6y WORDADDR
+	load WORDADDR MASK			; mask = *wordaddr
+	add Y #1 Y				; y++
 
-binWhileX: sub R0 R6 R7			; while (x != width){
+binWhileX: sub X WIDTH R7			; while (x != width){
 	jumpz R7 binWhileXCont
-	mod R0 #32 R4				; bitaddr = x % 32
+	mod X #32 BITADDR				; bitaddr = x % 32
 
-	jumpnz R4 binIfCont			; if (bitaddr == 0) {
+	jumpnz BITADDR binIfCont			; if (bitaddr == 0) {
 	;;if body
-	store R3 R2					; *wordaddr = mask
-	add R2 #1 R2				; wordaddr++
-	load #0 R3						; mask = 0
+	store MASK WORDADDR					; *wordaddr = mask
+	add WORDADDR #1 WORDADDR				; wordaddr++
+	load #0 MASK						; mask = 0
 
-	binIfCont: add R0 #1 R0					; } x++
-	binRL: load 0xFFF0 R5					; c = read char
-	jumpz R5 binRL
-	sub R5 #'0' R5					; bit = TOINT(c)
+binIfCont: add X #1 X					; } x++
+binRL: load 0xFFF0 C					; c = read char
+	jumpz C binRL
+	sub C #'0' C					; bit = TOINT(c)
 
-	jumpz R5 binWhileX	; if bit = 0, there is no need to shift and or
+	jumpz C binWhileX	; if bit = 0, there is no need to shift and or
 
-	rotate R4 R5 R5				; bit = bit << bitaddr
-	or R3 R5 R3					; mask = mask | bit
+	rotate BITADDR C C				; bit = bit << bitaddr
+	or MASK C MASK					; mask = mask | bit
 	jump binWhileX				; }
 
 
-huffman: load #0 R0			; x = 0
-	load #0 R2			; count = 0
-	load #1 R3			; code = 1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; huffman mode
+
+; huffman: ;
+;    y = 0;
+;    x = 0;
+;    count = 0;
+;    int32_t code = 1;
+
+;cont: ;
+;    if (count == 0){
+;        READCHAR;
+;        c = fromBase64(c);
+;        count = 6;
+;    }
+;    code = code << 1;
+;    int32_t tmp = c & 0b100000;
+;    tmp = tmp >> 5;
+;    code = code | tmp;
+;    c = c << 1;
+;    count--;
+;    switch (code){
+;    case 0b100: goto node0;
+;    case 0b101: goto node1;
+;    case 0b1100: goto node2;
+;    case 0b1101: goto node3;
+;    case 0b11100: goto node4;
+;    case 0b11101: goto node5;
+;    case 0b11110: goto node6;
+;    case 0b11111: goto node7;
+;    default: goto cont;
+;   }
+
+#define Count R2
+#define Code R3
+#define HufC R4
+
+huffman: load #0 X			; x = 0
+	load #0 Count			; count = 0
+	load #1 Code			; code = 1
 	store R6 width
 	store SP height
 
-continue: jumpnz R2 huffIf1	; if (count == 0){
-huffRL:	 load 0xFFF0 R4				; READCHAR
-	jumpz R4 huffRL
-	load R4 #fromBase64 R4			; c = fromBase64(c)
-	load #6 R2				;count = 6
+continue: jumpnz Count huffIf1	; if (count == 0){
+huffRL:	 load 0xFFF0 HufC				; READCHAR
+	jumpz HufC huffRL
+	load HufC #fromBase64 HufC			; c = fromBase64(c)
+	load #6 Count				;count = 6
 					; }
-huffIf1: rotate #1 R3 R3		; code = code << 1
-	and R4 #0x20 R5		; tmp = C & 0b100000
+huffIf1: rotate #1 Code Code		; code = code << 1
+	and HufC #0x20 R5		; tmp = C & 0b100000
 	rotate #-5 R5 R5		; tmp = tmp >> 5
-	or R3 R5 R3		; code = code | tmp
-	rotate #1 R4 R4		; c = c << 1
-	sub R2 #1 R2		; count--
-	add R3 #huffmanDecode PC	; switch(code) -> jump to desired 'node'
+	or Code R5 Code		; code = code | tmp
+	rotate #1 HufC HufC		; c = c << 1
+	sub Count #1 Count		; count--
+	add Code #huffmanDecode PC	; switch(code) -> jump to desired 'node'
 
 finish: halt
 
@@ -183,24 +317,51 @@ jump node7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Node 0
 
+;    x += 8;
+;    if (x >= width){
+;        y++;
+;        x = x % width;
+;    }
+;    if (y == height){
+;        HALT;
+;    }
+;    code = 1;
+;    goto cont;
 
 node0: load #8 R7
-set0s:	add R0 R7 R0				; x += cond
+set0s:	add X R7 X				; x += cond
 	load width R5
-	sub R0 R5 R6				; if (c >= width){
+	sub X R5 R6				; if (c >= width){
 	jumpn R6 nodeIf2
-	add R1 #1 R1					; y++
-	mod R0 R5 R0					; x = x % width
+	add Y #1 Y					; y++
+	mod X R5 X					; x = x % width
 						;}
 nodeIf2: load height R5			; if (y == height)
-	sub R1 R5 R5
+	sub Y R5 R5
 	jumpz R5 finish				; HALT
 
-NodeEnd:load #1 R3				; code = 1
+NodeEnd:load #1 Code				; code = 1
 	jump continue				; goto cont
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Node 1
+
+;node1: ;
+;    temp = 0;
+;    while (temp != 8){
+;        output[6 * y + x / 32] |= 1 << (x % 32);
+;        x++;
+;        temp++;
+;        if (x == width){
+;            x = 0;
+;            y++;
+;            if (y == height){
+;                HALT;
+;            }
+;        }
+;    }
+;    code = 1;
+;    goto cont;
 
 node1: load #8 R7
 	store R7 cond
@@ -208,26 +369,26 @@ set1s:	load #0 R5				; temp = 0
 node1While: load cond R7
 	sub R5 R7 R7			; while (temp != 8){
 	jumpz R7 NodeEnd			; code = 1; goto cont
-	load R1 #outAdd6y R6
-	div R0 #32 R7
+	load Y #outAdd6y R6
+	div X #32 R7
 	add R7 R6 R6					; R6 = output + 6*y + x / 32
 	load R6 R7					; R7 = *R6
 
 	;mod32Shl
-	load R0 #mod32Shl SP				; SP = 1 << (x % 32)
+	load X #mod32Shl SP				; SP = 1 << (x % 32)
 
 	or R7 SP R7
 	store R7 R6					; *R6 = SP | R7
-	add R0 #1 R0					; x++
+	add X #1 X					; x++
 	add R5 #1 R5					; temp ++
 
 	load width R6					; if (x == width){
-	sub R0 R6 R6
+	sub X R6 R6
 	jumpnz R6 node1While
-	load #0 R0						; x = 0
-	add R1 #1 R1						; y ++
+	load #0 X						; x = 0
+	add Y #1 Y						; y ++
 	load height R6						; if (y == height)
-	sub R1 R6 R6							; HALT
+	sub Y R6 R6							; HALT
 	jumpz R6 finish
 	jump node1While
 

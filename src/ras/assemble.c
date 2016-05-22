@@ -45,12 +45,12 @@ volatile int memLoc = 0;
 
 char* keys[ADDRESSABLE_MEMORY]; //each lable is a key to these values
 int values[ADDRESSABLE_MEMORY]; //the memory locations where each lable is defined
-//up to 100 invocations of each lable.
+//up to 500 invocations of each lable.
 //These lists store their length as the first element
 //These are the locations in the instruction buffer where each invocation is
-int instrCounts[ADDRESSABLE_MEMORY][100];
+int instrCounts[ADDRESSABLE_MEMORY][501];
 //These are the locations in the output buffer where each instruction is (the instructions to be edited)
-int memLocs[ADDRESSABLE_MEMORY][100];
+int memLocs[ADDRESSABLE_MEMORY][501];
 int lableCounter = 0; //incrementing index for each of these arrays;
 
 int assemble(struct Instruction* instructions[], int len, int32_t * buff){
@@ -267,8 +267,7 @@ void resolveLables(struct Instruction* instructions[], int32_t buff[]){
             case JUMPN: break;
             case JUMPNZ: break;
             case CALL: break;
-            case LOAD_ABS:
-                break;
+            case LOAD_ABS: break;
             case LOAD_IND: break;
             case LOAD_IMM: break;
             case LOAD_BASE: break;

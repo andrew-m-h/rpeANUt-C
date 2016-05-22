@@ -1,22 +1,37 @@
-all: rpeanutc ras
+all: rpeanutc ras rpp
 
-rpeanutc: src/memory.c include/memory.h src/emulate.c include/emulate.h include/interrupt.h src/rpeanutc.c
-	gcc -o rpeanutc -std=gnu11 -Wall -I include src/rpeanutc.c src/memory.c src/emulate.c
+rpeanutc: src/rpeanutc/memory.c include/rpeanutc/memory.h src/rpeanutc/emulate.c include/rpeanutc/emulate.h include/rpeanutc/interrupt.h src/rpeanutc/rpeanutc.c
+	cc -o rpeanutc -std=gnu11 -Wall -O2 -I include/rpeanutc src/rpeanutc/*.c
 
-ras: src/parser.tab.c include/parser.tab.h src/tokenizer.yy.c src/ras.c include/parser.h include/assemble.h src/assemble.c
-	gcc -o ras -std=c11 -Wall -I include src/parser.tab.c src/ras.c src/tokenizer.yy.c src/assemble.c -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-unused-function
+ras: src/ras/parser.tab.c include/ras/parser.tab.h src/ras/tokenizer.yy.c src/ras/ras.c include/ras/parser.h include/ras/assemble.h src/ras/assemble.c
+	cc -o ras -std=c11 -Wall -I include/ras src/ras/*.c -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-unused-function
 
-src/parser.tab.c include/parser.tab.h: src/parser.y
-	bison -d src/parser.y
-	mv -f parser.tab.h include/
-	mv -f parser.tab.c src/
+rpp: src/rpp/parser.tab.c include/rpp/parser.tab.h src/rpp/tokenizer.yy.c src/rpp/rpp.c
+	cc -o rpp -std=c11 -Wall -I include/rpp src/rpp/*.c -Wno-unused-function
 
-src/tokenizer.yy.c: src/tokenizer.l include/parser.h include/parser.tab.h
-	flex -o src/tokenizer.yy.c src/tokenizer.l
+src/ras/parser.tab.c include/ras/parser.tab.h: src/ras/parser.y
+	bison -d src/ras/parser.y
+	mv -f parser.tab.h include/ras/
+	mv -f parser.tab.c src/ras/
+
+src/ras/tokenizer.yy.c: src/ras/tokenizer.l include/ras/parser.h include/ras/parser.tab.h
+	flex -o src/ras/tokenizer.yy.c src/ras/tokenizer.l
+
+src/rpp/parser.tab.c include/rpp/parser.tab.h: src/rpp/parser.y
+	bison -d src/rpp/parser.y
+	mv -f parser.tab.h include/rpp/
+	mv -f parser.tab.c src/rpp/
+
+src/rpp/tokenizer.yy.c: src/rpp/tokenizer.l include/rpp/parser.h include/rpp/parser.tab.h
+	flex -o src/rpp/tokenizer.yy.c src/rpp/tokenizer.l
 
 clean:
-	rm -f src/tokenizer.yy.c
-	rm -f src/parser.tab.c
-	rm -f include/parser.tab.h
+	rm -f src/ras/tokenizer.yy.c
+	rm -f src/ras/parser.tab.c
+	rm -f include/ras/parser.tab.h
+	rm -f src/rpp/tokenizer.yy.c
+	rm -f src/rpp/parser.tab.c
+	rm -f include/rpp/parser.tab.h
+	rm -f rpp
 	rm -f ras
 	rm -f rpeanutc

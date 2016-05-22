@@ -1,0 +1,6 @@
+#define start 0x100
+#define MOUSE cat fat
+
+start: load MOUSE r5
+
+block #10

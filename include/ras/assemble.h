@@ -7,6 +7,7 @@
 int assemble(struct Instruction**, int, int32_t*);
 
 int32_t emitTernary(int32_t, int, struct Operand, struct Operand, struct Operand);
+
 /*
 int32_t emitNeg(int, struct Operand, struct Operand);
 int32_t emitNot(int, struct Operand, struct Operand);

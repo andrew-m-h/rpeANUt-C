@@ -55,7 +55,9 @@ void emulate(){
         } else {
             CycleCount = 0;
         }
-        checkInterrupts();
+        if (!(SR & IM)){
+            checkInterrupts();
+        }
     } while (IR != 0x00000000);
 }
 
@@ -273,7 +275,7 @@ struct pollfd stdin_poll = {.fd = STDIN_FILENO
 void setIOFlags(void){
 
     if (poll(&stdin_poll, 1, 0)){
-        if (!(SR && IM)){
+        if (!(SR & IM)){
             KeyboardInterrupt = 1;
         }
         Memory[0xFFF1] = 0x1;

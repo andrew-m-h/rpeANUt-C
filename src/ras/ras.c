@@ -26,6 +26,9 @@ int main( int argc, char **argv )
     for (int i = 0; i < len; i++){
         fprintf(stderr, "%08x\n", program[i]);
     }
+
+
+
 #else
     assemble(Instructions, InstrCount, program);
 #endif
