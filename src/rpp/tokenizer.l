@@ -23,6 +23,8 @@ char* strdup(const char* str){
 
 %%
 
+\n*;.* //throw away comments & useless newlines
+
 <INITIAL>#define[ \t]+  BEGIN(MACROSTATE); return LINE_MACRO;
 <INITIAL>#include[ \t]+ BEGIN(INCLUDESTATE); return INCLUDE_MACRO;
 
@@ -31,9 +33,9 @@ char* strdup(const char* str){
 
 <MACROSTATE>[ \t]+[a-zA-Z0-9 \t]+    yylval.sval = strdup(yytext+1); return EXPANSION;
 
-<MACROSTATE,INCLUDESTATE>\n          BEGIN(INITIAL); return ENDL;
+<MACROSTATE,INCLUDESTATE>\n+          BEGIN(INITIAL); return ENDL;
 
 .              yylval.cval = yytext[0]; return CHAR; //catch-all
-\n             yylval.cval = '\n'; return CHAR; //catch-all
+\n+             yylval.cval = '\n'; return CHAR; //catch-all
 
 %%
