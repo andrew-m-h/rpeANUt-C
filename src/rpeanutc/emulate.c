@@ -9,16 +9,16 @@
 #include "emulate.h"
 #include "interrupt.h"
 
-#define haltcode 0x00000000
-#define addcode 0x10000000
-#define subcode 0x20000000
-#define multcode 0x30000000
-#define divcode 0x40000000
-#define modcode 0x50000000
-#define andcode 0x60000000
-#define orcode 0x70000000
-#define xorcode 0x80000000
-#define rotatecode 0xE0000000
+#define haltcode 0x0
+#define addcode 0x1
+#define subcode 0x2
+#define multcode 0x3
+#define divcode 0x4
+#define modcode 0x5
+#define andcode 0x6
+#define orcode 0x7
+#define xorcode 0x8
+#define rotatecode 0xE
 
 const int32_t MemoryFault = 0x0000;
 const int32_t IOInterrupt = 0x0001;
@@ -33,10 +33,12 @@ const int32_t OF = 0x00000001;
 const int32_t IM = 0x00000002;
 const int32_t TI = 0x00000004;
 
-int32_t R0 = 0, R1 = 0, R2 = 0, R3 = 0, R4 = 0, R5 = 0, R6 = 0, R7 = 0, SP = 0x7000, SR = 0, PC = 0x100, IR = 0;
-int32_t ONE = 1, ZERO = 0, MONE = -1;
-
-int32_t * registers[] = {&R0, &R1, &R2, &R3, &R4, &R5, &R6, &R7, &SP, &SR, &PC, &ONE, &ZERO, &MONE};
+//                     R0 ................ R7   SP    SR   PC  ONE ZERO MONE
+int32_t registers[] = {0, 0, 0, 0, 0, 0, 0, 0, 0x7000, 0, 0x100, 1, 0, -1};
+int32_t IR = 0;
+#define SP registers[8]
+#define SR registers[9]
+#define PC registers[10]
 
 int CycleCount = 0;
 
@@ -68,69 +70,71 @@ int32_t rotate (int32_t, int32_t);
         exit(1);                                                \
     }
 
+
 void execute (int32_t instruction){
-    int32_t nibble1, nibble2, nibble3;
+    int32_t nibble0, nibble1, nibble2, nibble3;
+    nibble0 = (instruction >> 28) & 0x0000000F;
     nibble1 = (instruction >> 24) & 0x0000000F;
     nibble2 = (instruction >> 20) & 0x0000000F;
     nibble3 = (instruction >> 16) & 0x0000000F;
 
     int32_t arg1, arg2, arg3;
-    arg1 = nibble1 == 0xE ? (int16_t)(instruction & 0x0000FFFF) : *registers[nibble1];
-    arg2 = nibble2 == 0xE ? (int16_t)(instruction & 0x0000FFFF) : *registers[nibble2];
-    arg3 = nibble3 == 0xE ? (int16_t)(instruction & 0x0000FFFF) : *registers[nibble3];
+    arg1 = nibble1 == 0xE ? (int16_t)(instruction & 0x0000FFFF) : registers[nibble1];
+    arg2 = nibble2 == 0xE ? (int16_t)(instruction & 0x0000FFFF) : registers[nibble2];
+    arg3 = nibble3 == 0xE ? (int16_t)(instruction & 0x0000FFFF) : registers[nibble3];
 
-    switch (instruction & 0xF0000000){ //check first nibble
+    switch (nibble0){ //check first nibble
     case haltcode:
         break;
     case addcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 + arg2;
+        registers[nibble3] = arg1 + arg2;
         break;
     case subcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 - arg2;
+        registers[nibble3] = arg1 - arg2;
         break;
     case multcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 * arg2;
+        registers[nibble3] = arg1 * arg2;
         break;
     case divcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 / arg2;
+        registers[nibble3] = arg1 / arg2;
         break;
     case modcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 % arg2;
+        registers[nibble3] = arg1 % arg2;
         break;
     case andcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 & arg2;
+        registers[nibble3] = arg1 & arg2;
         break;
     case orcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 | arg2;
+        registers[nibble3] = arg1 | arg2;
         break;
     case xorcode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = arg1 ^ arg2;
+        registers[nibble3] = arg1 ^ arg2;
         break;
     case rotatecode:
         CHECK_CONSTANT_REG(nibble3);
-        *registers[nibble3] = rotate(arg2, arg1);
+        registers[nibble3] = rotate(arg2, arg1);
         break;
-    case 0xA0000000: ; //one of: neg, not, move, call, return, trap, jump, jumpz, jumpn, jumpnz, reset, set, push, pop
+    case 0xA: ; //one of: neg, not, move, call, return, trap, jump, jumpz, jumpn, jumpnz, reset, set, push, pop
         switch (nibble1){
         case 0x0: //negate
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = - arg2;
+            registers[nibble3] = - arg2;
             break;
         case 0x1: //not
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = ~ arg2;
+            registers[nibble3] = ~ arg2;
             break;
         case 0x2: //move
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = arg2;
+            registers[nibble3] = arg2;
             break;
         case 0x3: //one of call, return trap
             switch (nibble3){
@@ -154,13 +158,13 @@ void execute (int32_t instruction){
                 PC = instruction & 0x0000FFFF;
                 break;
             case 0x1: //jumpz
-                PC = *registers[nibble3] ? PC : instruction & 0x0000FFFF;
+                PC = registers[nibble3] ? PC : instruction & 0x0000FFFF;
                 break;
             case 0x2: //jumpn
-                PC = (*registers[nibble3] < 0) ? instruction & 0x0000FFFF : PC;
+                PC = (registers[nibble3] < 0) ? instruction & 0x0000FFFF : PC;
                 break;
             case 0x3: //jumpnz
-                PC = *registers[nibble3] ? instruction & 0x0000FFFF : PC;
+                PC = registers[nibble3] ? instruction & 0x0000FFFF : PC;
                 break;
             default:
                 fprintf(stderr, "Invalid instruction: %08x\n", instruction);
@@ -185,7 +189,7 @@ void execute (int32_t instruction){
                 break;
             case 0x1: //pop
                 CHECK_CONSTANT_REG(nibble3);
-                *registers[nibble3] = readMem(SP--); //Memory[SP--];
+                registers[nibble3] = readMem(SP--); //Memory[SP--];
                 break;
             default:
                 fprintf(stderr, "Invalid instruction: %08x\n", instruction);
@@ -195,38 +199,38 @@ void execute (int32_t instruction){
             fprintf(stderr, "Invalid instruction: %08x\n", instruction);
         }
         break;
-    case 0xC0000000: ; //load
+    case 0xC: ; //load
         switch (nibble1){
         case 0x0: //immediate load
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = (int16_t)(instruction & 0x0000FFFF);
+            registers[nibble3] = (int16_t)(instruction & 0x0000FFFF);
             break;
         case 0x1: //absolute load
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = readMem(instruction & 0x0000FFFF);
+            registers[nibble3] = readMem(instruction & 0x0000FFFF);
             break;
         case 0x2: //indirect load
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = readMem(*registers[nibble2]);
+            registers[nibble3] = readMem(registers[nibble2]);
             break;
         case 0x3: //base + disp load
             CHECK_CONSTANT_REG(nibble3);
-            *registers[nibble3] = readMem(*registers[nibble2] + (int16_t)(instruction & 0x0000FFFF));
+            registers[nibble3] = readMem(registers[nibble2] + (int16_t)(instruction & 0x0000FFFF));
             break;
         default:
             fprintf(stderr, "Invalid instruction: %08x\n", instruction);
         }
         break;
-    case 0xD0000000: ; //store
+    case 0xD: ; //store
         switch (nibble1){
         case 0x1: //absolute store
-            writeMem(instruction & 0x0000FFFF, *registers[nibble2]);
+            writeMem(instruction & 0x0000FFFF, registers[nibble2]);
             break;
         case 0x2: //indirect store
-            writeMem(*registers[nibble3], *registers[nibble2]);
+            writeMem(registers[nibble3], registers[nibble2]);
             break;
         case 0x3: //base + disp store
-            writeMem(*registers[nibble3] + (int16_t)(instruction & 0x0000FFFF), *registers[nibble2]);
+            writeMem(registers[nibble3] + (int16_t)(instruction & 0x0000FFFF), registers[nibble2]);
             break;
         default:
             fprintf(stderr, "Invalid instruction: %08x\n", instruction);
