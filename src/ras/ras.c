@@ -18,17 +18,17 @@ int main( int argc, char **argv )
 
     do {int32_t program[ADDRESSABLE_MEMORY] = {0};
 #ifdef DEBUG
-    int len = assemble(Instructions, InstrCount, program);
-    for (int i = 0; i < len; i++){
-        fprintf(stderr, "%08x\n", program[i]);
-    }
+        int len = assemble(Instructions, InstrCount, program);
+        for (int i = 0; i < len; i++){
+            fprintf(stderr, "%08x\n", program[i]);
+        }
 
 #else
-    assemble(Instructions, InstrCount, program);
+        assemble(Instructions, InstrCount, program);
 #endif
-    fwrite(program, sizeof(int32_t), ADDRESSABLE_MEMORY, stdout);
+        fwrite(program, sizeof(int32_t), ADDRESSABLE_MEMORY, stdout);
 
-    cleanup();
+        cleanup();
         yyparse();
     } while (!feof(yyin));
 

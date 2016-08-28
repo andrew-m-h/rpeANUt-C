@@ -3,6 +3,7 @@ all: rpeanutc ras rpp
 rpeanutc: src/rpeanutc/memory.c include/rpeanutc/memory.h src/rpeanutc/emulate.c include/rpeanutc/emulate.h include/rpeanutc/interrupt.h src/rpeanutc/rpeanutc.c
 	cc -o rpeanutc -std=gnu11 -Wall -O2 -I include/rpeanutc src/rpeanutc/*.c
 
+
 ras: src/ras/parser.tab.c include/ras/parser.tab.h src/ras/tokenizer.yy.c src/ras/ras.c include/ras/parser.h include/ras/assemble.h src/ras/assemble.c
 	cc -o ras -std=c11 -Wall -I include/ras src/ras/*.c -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-unused-function
 
